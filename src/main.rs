@@ -1,11 +1,17 @@
 use anyhow::{Context, Result};
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, ValueEnum};
 use std::fs;
 use std::path::Path;
 use std::process::Command;
 
 mod content;
 use content::templates;
+
+#[derive(Copy, Clone, Eq, PartialEq, Debug, ValueEnum)]
+enum TestFramework {
+    Mollusk,
+    Litesvm,
+}
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -19,6 +25,8 @@ struct Cli {
 enum Commands {
     Init {
         project_name: String,
+        #[arg(long, value_enum, default_value_t = TestFramework::Mollusk)]
+        test_framework: TestFramework,
     },
     Build,
     Test,
@@ -31,8 +39,11 @@ fn main() -> Result<()> {
     let cli = Cli::parse();
 
     match &cli.command {
-        Commands::Init { project_name } => {
-            init_project(project_name)?;
+        Commands::Init {
+            project_name,
+            test_framework,
+        } => {
+            init_project(project_name, *test_framework)?;
         }
         Commands::Build => {
             println!("Building program");
@@ -131,7 +142,7 @@ fn display_help_banner() -> Result<()> {
     Ok(())
 }
 
-fn init_project(project_name: &str) -> Result<()> {
+fn init_project(project_name: &str, test_framework: TestFramework) -> Result<()> {
     // Validate project name - only allow alphanumeric characters and underscores
     if !is_valid_project_name(project_name) {
         anyhow::bail!(
@@ -227,8 +238,13 @@ fn init_project(project_name: &str) -> Result<()> {
         user_address = String::new();
     }
 
-    create_project_structure(project_dir, user_address, program_address.clone())?;
-    update_cargo_toml(project_dir, project_name)?;
+    create_project_structure(
+        project_dir,
+        user_address,
+        program_address.clone(),
+        test_framework,
+    )?;
+    update_cargo_toml(project_dir, project_name, test_framework)?;
 
     init_git_repo(project_dir, project_name)?;
 
@@ -309,6 +325,7 @@ fn create_project_structure(
     project_dir: &Path,
     user_address: String,
     program_address: String,
+    test_framework: TestFramework,
 ) -> Result<()> {
     fs::write(project_dir.join("README.md"), templates::readme_md())?;
     fs::write(project_dir.join(".gitignore"), templates::gitignore())?;
@@ -316,10 +333,51 @@ fn create_project_structure(
     let src_dir = project_dir.join("src");
     fs::create_dir_all(&src_dir)?;
 
-    fs::write(
-        src_dir.join("lib.rs"),
-        templates::lib_rs(program_address.as_str()),
-    )?;
+    match test_framework {
+        TestFramework::Mollusk => {
+            fs::write(
+                src_dir.join("lib.rs"),
+                templates::lib_rs(program_address.as_str()),
+            )?;
+
+            let test_dir = project_dir.join("tests");
+            fs::create_dir_all(&test_dir)?;
+
+            let project_name = project_dir
+                .file_name()
+                .and_then(|name| name.to_str())
+                .unwrap_or("project");
+
+            fs::write(
+                test_dir.join("tests.rs"),
+                templates::unit_tests::unit_test_rs(&user_address, &program_address, project_name),
+            )?;
+        }
+        TestFramework::Litesvm => {
+            fs::write(
+                src_dir.join("lib.rs"),
+                templates::lib_rs_with_internal_tests(program_address.as_str()),
+            )?;
+
+            let tests_dir = src_dir.join("tests");
+            fs::create_dir_all(&tests_dir)?;
+
+            fs::write(
+                tests_dir.join("mod.rs"),
+                templates::unit_tests::litesvm_tests_mod_rs(),
+            )?;
+
+            let project_name_str = project_dir
+                .file_name()
+                .and_then(|name| name.to_str())
+                .unwrap_or("project");
+
+            fs::write(
+                tests_dir.join("initialize.rs"),
+                templates::unit_tests::litesvm_initialize_rs(project_name_str),
+            )?;
+        }
+    }
 
     fs::write(src_dir.join("entrypoint.rs"), templates::entrypoint_rs())?;
 
@@ -348,25 +406,35 @@ fn create_project_structure(
 
     fs::write(states_dir.join("state.rs"), templates::states::state_rs())?;
 
-    let test_dir = project_dir.join("tests");
-    fs::create_dir_all(&test_dir)?;
-
-    let test_address = &user_address;
-
-    let project_name = project_dir
-        .file_name()
-        .and_then(|name| name.to_str())
-        .unwrap_or("project");
-
-    fs::write(
-        test_dir.join("tests.rs"),
-        templates::unit_tests::unit_test_rs(test_address, &program_address, project_name),
-    )?;
+    // tests already handled per framework above
 
     Ok(())
 }
 
-fn update_cargo_toml(project_dir: &Path, project_name: &str) -> Result<()> {
+fn update_cargo_toml(
+    project_dir: &Path,
+    project_name: &str,
+    test_framework: TestFramework,
+) -> Result<()> {
+    let dev_deps = match test_framework {
+        TestFramework::Mollusk => {
+            r#"
+[dev-dependencies]
+solana-sdk = "3.0.0"
+mollusk-svm = "0.7.0"
+mollusk-svm-bencher = "0.7.0" 
+"#
+        }
+        TestFramework::Litesvm => {
+            r#"
+[dev-dependencies]
+solana-sdk = "3.0.0"
+litesvm = "0.8.1"
+litesvm-token = "0.8.1"
+"#
+        }
+    };
+
     let cargo_toml = format!(
         r#"[package]
 name = "{}"
@@ -383,17 +451,15 @@ pinocchio-pubkey = "0.3.0"
 pinocchio-system = "0.3.0"
 shank = "0.4.5"
 
-[dev-dependencies]
-solana-sdk = "3.0.0"
-mollusk-svm = "0.7.0"
-mollusk-svm-bencher = "0.7.0" 
+{dev_deps}
 
 [features]
 no-entrypoint = []
 std = []
 test-default = ["no-entrypoint", "std"]
 "#,
-        project_name
+        project_name,
+        dev_deps = dev_deps
     );
 
     fs::write(project_dir.join("Cargo.toml"), cargo_toml)?;
