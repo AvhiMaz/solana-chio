@@ -356,16 +356,11 @@ fn create_project_structure(
         TestFramework::Litesvm => {
             fs::write(
                 src_dir.join("lib.rs"),
-                templates::lib_rs_with_internal_tests(program_address.as_str()),
+                templates::lib_rs(program_address.as_str()),
             )?;
 
-            let tests_dir = src_dir.join("tests");
-            fs::create_dir_all(&tests_dir)?;
-
-            fs::write(
-                tests_dir.join("mod.rs"),
-                templates::unit_tests::litesvm_tests_mod_rs(),
-            )?;
+            let test_dir = project_dir.join("tests");
+            fs::create_dir_all(&test_dir)?;
 
             let project_name_str = project_dir
                 .file_name()
@@ -373,7 +368,7 @@ fn create_project_structure(
                 .unwrap_or("project");
 
             fs::write(
-                tests_dir.join("initialize.rs"),
+                test_dir.join("initialize.rs"),
                 templates::unit_tests::litesvm_initialize_rs(project_name_str),
             )?;
         }

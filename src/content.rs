@@ -56,29 +56,6 @@ fn process_instruction(
 }"#
     }
 
-    // lib.rs template with internal tests module (for LiteSVM layout)
-    pub fn lib_rs_with_internal_tests(address: &str) -> String {
-        format!(
-            r#"#![cfg_attr(not(feature = "std"), no_std)]
-
-#[cfg(not(feature = "no-entrypoint"))]
-mod entrypoint;
-
-#[cfg(feature = "std")]
-extern crate std;
-
-pub mod errors;
-pub mod instructions;
-pub mod states;
-
-#[cfg(all(test, feature = "std"))]
-pub mod tests;
-
-pinocchio_pubkey::declare_id!("{}");"#,
-            address
-        )
-    }
-
     // Configuration files
     pub fn readme_md() -> &'static str {
         r#"# Chio Pinocchio Project
@@ -441,12 +418,6 @@ fn test_initialize_mystate() {
                 .replace("{project_name}", project_name)
         }
 
-        // LiteSVM layout: create src/tests/mod.rs
-        pub fn litesvm_tests_mod_rs() -> &'static str {
-            r#"pub mod initialize;
-pub use initialize::*;"#
-        }
-
         pub fn litesvm_initialize_rs(project_name: &str) -> String {
             let template = r#"// use this to run the tests -
 // cargo test --features std  -- --no-capture
@@ -464,16 +435,16 @@ use solana_sdk::{
     transaction::Transaction,
 };
 
-use crate::instructions::Initialize;
-use crate::states::{self, MyState};
-use crate::states::utils::DataLen;
+use {project_name}::instructions::Initialize;
+use {project_name}::states::{self, MyState};
+use {project_name}::states::utils::DataLen;
 
-pub(super) fn program_id() -> Pubkey {
+pub fn program_id() -> Pubkey {
     // Convert Pinocchio program ID to solana-sdk Pubkey
-    Pubkey::new_from_array(crate::ID)
+    Pubkey::new_from_array({project_name}::ID)
 }
 
-pub(super) fn setup() -> (LiteSVM, Keypair) {
+pub fn setup() -> (LiteSVM, Keypair) {
     let mut svm = LiteSVM::new();
 
     let so_path = PathBuf::from("target/deploy").join("{project_name}.so");
@@ -487,13 +458,13 @@ pub(super) fn setup() -> (LiteSVM, Keypair) {
     (svm, payer)
 }
 
-pub(super) struct InitializeData {
+pub struct InitializeData {
     pub payer: Pubkey,
     pub state_pda: (Pubkey, u8),
 }
 
 impl InitializeData {
-    pub(super) fn new(payer: &Keypair) -> Self {
+    pub fn new(payer: &Keypair) -> Self {
         let (state_pda, bump) =
             Pubkey::find_program_address(&[MyState::SEED.as_bytes(), &payer.pubkey().to_bytes()], &program_id());
         Self {
@@ -503,7 +474,7 @@ impl InitializeData {
     }
 }
 
-pub(super) fn initialize(
+pub fn initialize(
     svm: &mut LiteSVM,
     payer: &Keypair,
     data: &InitializeData,

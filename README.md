@@ -85,8 +85,8 @@ chio test
 # LiteSVM example
 chio init my-pinocchio-app --test-framework litesvm
 cd my-pinocchio-app
-cargo build-sbf
-cargo test --features std -- --no-capture
+chio build
+chio test
 ```
 
 
@@ -112,8 +112,6 @@ my-project/
 └── tests/                   # Test files
     └── tests.rs
 ```
-
-- If initialized with `--test-framework litesvm`, tests are placed under `src/tests/` and `lib.rs` exposes `#[cfg(all(test, feature = "std"))] pub mod tests;`.
 
 
 ## Contributing
