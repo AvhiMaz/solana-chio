@@ -46,8 +46,11 @@ cargo install --git https://github.com/4rjunc/solana-chio --force
 ### Available Commands
 
 ```bash
-# Initialize a new project
+# Initialize a new project (default tests: mollusk)
 chio init <project-name>
+
+# Use LiteSVM tests instead of Mollusk
+chio init <project-name> --test-framework litesvm
 
 # Build your project
 chio build
@@ -79,6 +82,11 @@ chio build
 # Run tests
 chio test
 
+# LiteSVM example
+chio init my-pinocchio-app --test-framework litesvm
+cd my-pinocchio-app
+chio build
+chio test
 ```
 
 
