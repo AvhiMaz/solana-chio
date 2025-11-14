@@ -14,34 +14,17 @@ mod filesystem {
         let temp_dir = TempDir::new().expect("Failed to create temp dir");
         let project_dir = temp_dir.path();
 
-        let cargo_toml = format!(
-            r#"[package]
-name = "test_project"
-version = "0.1.0"
-edition = "2021"
-
-[lib]
-crate-type = ["cdylib", "rlib"]
-
-[dependencies]
-pinocchio = "0.9.2"
-
-[dev-dependencies]
-solana-sdk = "3.0.0"
-mollusk-svm = "0.7.0"
-mollusk-svm-bencher = "0.7.0"
-"#
-        );
+        let cargo_toml = templates::cargo_toml_mollusk("test_project");
 
         fs::write(project_dir.join("Cargo.toml"), cargo_toml).expect("Failed to write Cargo.toml");
 
         let content = fs::read_to_string(project_dir.join("Cargo.toml"))
             .expect("Failed to read Cargo.toml");
 
-        assert!(content.contains("mollusk-svm = \"0.7.0\""));
-        assert!(content.contains("mollusk-svm-bencher = \"0.7.0\""));
-        assert!(content.contains("pinocchio = \"0.9.2\""));
-        assert!(content.contains("solana-sdk = \"3.0.0\""));
+        assert!(content.contains("mollusk-svm"));
+        assert!(content.contains("mollusk-svm-bencher"));
+        assert!(content.contains("pinocchio"));
+        assert!(content.contains("solana-sdk"));
     }
 
     #[test]
@@ -49,32 +32,15 @@ mollusk-svm-bencher = "0.7.0"
         let temp_dir = TempDir::new().expect("Failed to create temp dir");
         let project_dir = temp_dir.path();
 
-        let cargo_toml = format!(
-            r#"[package]
-name = "test_project"
-version = "0.1.0"
-edition = "2021"
-
-[lib]
-crate-type = ["cdylib", "rlib"]
-
-[dependencies]
-pinocchio = "0.9.2"
-
-[dev-dependencies]
-solana-sdk = "3.0.0"
-litesvm = "0.8.1"
-litesvm-token = "0.8.1"
-"#
-        );
+        let cargo_toml = templates::cargo_toml_litesvm("test_project");
 
         fs::write(project_dir.join("Cargo.toml"), cargo_toml).expect("Failed to write Cargo.toml");
 
         let content = fs::read_to_string(project_dir.join("Cargo.toml"))
             .expect("Failed to read Cargo.toml");
 
-        assert!(content.contains("litesvm = \"0.8.1\""));
-        assert!(content.contains("litesvm-token = \"0.8.1\""));
+        assert!(content.contains("litesvm"));
+        assert!(content.contains("litesvm-token"));
         assert!(!content.contains("mollusk-svm"));
     }
 

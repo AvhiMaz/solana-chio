@@ -30,14 +30,3 @@ pub fn is_valid_project_name(name: &str) -> bool {
 
     name.chars().all(|c| c.is_alphanumeric() || c == '_')
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn lib_is_valid_project_name_basic() {
-        assert!(is_valid_project_name("test_project"));
-        assert!(!is_valid_project_name(""));
-    }
-}

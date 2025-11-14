@@ -103,6 +103,60 @@ tests/
 .env"#
     }
 
+    pub fn cargo_toml_mollusk(project_name: &str) -> String {
+        format!(
+            r#"[package]
+name = "{}"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+pinocchio = "0.9.2"
+
+[dev-dependencies]
+solana-sdk = "3.0.0"
+mollusk-svm = "0.7.0"
+mollusk-svm-bencher = "0.7.0"
+
+[features]
+no-entrypoint = []
+std = []
+test-default = ["no-entrypoint", "std"]
+"#,
+            project_name
+        )
+    }
+
+    pub fn cargo_toml_litesvm(project_name: &str) -> String {
+        format!(
+            r#"[package]
+name = "{}"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+pinocchio = "0.9.2"
+
+[dev-dependencies]
+solana-sdk = "3.0.0"
+litesvm = "0.8.1"
+litesvm-token = "0.8.1"
+
+[features]
+no-entrypoint = []
+std = []
+test-default = ["no-entrypoint", "std"]
+"#,
+            project_name
+        )
+    }
+
     pub fn errors_rs() -> &'static str {
         r#"use pinocchio::program_error::ProgramError;
 
